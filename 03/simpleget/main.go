@@ -1,38 +1,29 @@
 package main
 
 import (
-	"bytes"
-	"io"
 	"log"
-	"mime/multipart"
 	"net/http"
-	"net/textproto"
-	"os"
+	"net/http/cookiejar"
+	"net/http/httputil"
 )
 
 func main() {
-	var buffer bytes.Buffer
-	writer := multipart.NewWriter(&buffer)
-	writer.WriteField("name", "Michael Jackson")
-	part := make(textproto.MIMEHeader)
-	part.Set("Content-TYpe", "image/jpeg")
-	part.Set("Content-Disposition", `form-data; name="thumnail"; filename="photo.jpg"`)
-	fileWriter, err := writer.CreatePart(part)
+	jar, err := cookiejar.New(nil)
 	if err != nil {
 		panic(err)
 	}
-	readFile, err := os.Open("photo.jpg")
-	if err != nil {
-		panic(err)
+	client := http.Client{
+		Jar: jar,
 	}
-	defer readFile.Close()
-	io.Copy(fileWriter, readFile)
-	writer.Close()
-	resp, err := http.Post("http://localhost:18888", "text/plain", &buffer)
-	if err != nil {
-		// 送信失敗
-		panic(err)
+	for i := 0; i < 2; i++ {
+		resp, err := client.Get("http://localhost:18888/cookie")
+		if err != nil {
+			panic(err)
+		}
+		dump, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			panic(err)
+		}
+		log.Println(string(dump))
 	}
-
-	log.Println("Status:", resp.Status)
 }
